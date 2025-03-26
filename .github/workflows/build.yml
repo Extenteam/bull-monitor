@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clean
+        run: sudo rm -rf $PWD/* $PWD/.[!.]*
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Git Info
+        id: git_info
+        run: |
+          PREFIX=$(echo ${GITHUB_REF#refs/heads/} | tr [:upper:] [:lower:] | sed "s#[/_]#-#g")
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          echo "new tag: ${PREFIX}-${GITHUB_SHA::8}-b${TIMESTAMP}"
+          echo "IMAGE_TAG=${PREFIX}-${GITHUB_SHA::8}-b${TIMESTAMP}" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${PREFIX}" >> $GITHUB_ENV
+
+      # - name: Configure AWS production credentials
+      #   if: github.ref == 'refs/heads/production'
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-region: us-east-2
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_ACCESS_KEY_SECRET}}
+
+      - name: Configure AWS staging credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-2
+          aws-access-key-id: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.STAGING_AWS_ACCESS_KEY_SECRET}}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: infra-bull-monitor
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG  .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME
+
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME
