@@ -204,27 +204,33 @@ export class BullMQMetricsFactory {
 
     queueEvents.on('stalled', async (event) => {
       const job = await queue.getJob(event.jobId);
-      const jobLabels = {
-        [LABEL_NAMES.JOB_NAME]: job.name,
-        ...labels,
-      };
-      this.jobs_stalled.inc(jobLabels, 1);
+      if (job) {
+        const jobLabels = {
+          [LABEL_NAMES.JOB_NAME]: job.name,
+          ...labels,
+        };
+        this.jobs_stalled.inc(jobLabels, 1);
+      }
     });
     queueEvents.on('active', async (event) => {
       const job = await queue.getJob(event.jobId);
-      const jobLabels = {
-        [LABEL_NAMES.JOB_NAME]: job.name,
-        ...labels,
-      };
-      this.jobs_active.inc(jobLabels, 1);
+      if (job) {
+        const jobLabels = {
+          [LABEL_NAMES.JOB_NAME]: job.name,
+          ...labels,
+        };
+        this.jobs_active.inc(jobLabels, 1);
+      }
     });
     queueEvents.on('waiting', async (event) => {
       const job = await queue.getJob(event.jobId);
-      const jobLabels = {
-        [LABEL_NAMES.JOB_NAME]: job.name,
-        ...labels,
-      };
-      this.jobs_waiting.inc(jobLabels, 1);
+      if (job) {
+        const jobLabels = {
+          [LABEL_NAMES.JOB_NAME]: job.name,
+          ...labels,
+        };
+        this.jobs_waiting.inc(jobLabels, 1);
+      }
     });
     queueEvents.on('failed', async (event) => {
       const job = await queue.getJob(event.jobId);
@@ -241,20 +247,24 @@ export class BullMQMetricsFactory {
     });
     queueEvents.on('delayed', async (event) => {
       const job = await queue.getJob(event.jobId);
-      const jobLabels = {
-        [LABEL_NAMES.JOB_NAME]: job.name,
-        ...labels,
-      };
-      this.jobs_delayed.inc(jobLabels, 1);
+      if (job) {
+        const jobLabels = {
+          [LABEL_NAMES.JOB_NAME]: job.name,
+          ...labels,
+        };
+        this.jobs_delayed.inc(jobLabels, 1);
+      }
     });
     queueEvents.on('completed', async (event) => {
       const job = await queue.getJob(event.jobId);
-      const jobLabels = {
-        [LABEL_NAMES.JOB_NAME]: job.name,
-        ...labels,
-      };
-      this.jobs_completed.inc(jobLabels, 1);
-      this.recordJobMetrics(jobLabels, STATUS_TYPES.COMPLETED, job);
+      if (job) {
+        const jobLabels = {
+          [LABEL_NAMES.JOB_NAME]: job.name,
+          ...labels,
+        };
+        this.jobs_completed.inc(jobLabels, 1);
+        this.recordJobMetrics(jobLabels, STATUS_TYPES.COMPLETED, job);
+      }
     });
 
     const metricInterval = setInterval(async () => {
