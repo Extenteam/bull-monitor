@@ -22,7 +22,7 @@ export class ConfigService {
      * Automatically update redis configuration (false requires you
      * to manually set keyspace notifications)
      */
-    REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS: bool({ default: true }),
+    REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS: bool({ default: false }),
     /**
      * Redis database number
      */

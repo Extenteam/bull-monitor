@@ -2,7 +2,7 @@ import { ConfigService } from '@app/config/config.service';
 import { InjectLogger, LoggerService } from '@app/logger';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Mutex, withTimeout } from 'async-mutex';
-import { Queue, QueueScheduler } from 'bullmq';
+import { Queue } from 'bullmq';
 import { RedisService } from 'nestjs-redis';
 import { TypedEmitter } from 'tiny-typed-emitter2';
 import {
@@ -39,7 +39,7 @@ const REDIS_CONFIG_NOTIFY_KEYSPACE_EVENTS_FLAGS = 'A$K';
 export class BullQueuesService implements OnModuleInit, OnModuleDestroy {
   private _initialized = false;
   private readonly _queues: { [queueName: string]: Queue } = {};
-  private readonly _schedulers: { [queueName: string]: QueueScheduler } = {};
+  // private readonly _schedulers: { [queueName: string]: QueueScheduler } = {};
   private readonly _redisMutex = withTimeout(new Mutex(), 10000);
   private readonly _bullMutex = withTimeout(new Mutex(), 10000);
 
@@ -49,7 +49,7 @@ export class BullQueuesService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly redisService: RedisService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   private async processMessage(
     eventType: REDIS_KEYSPACE_EVENT_TYPES,
@@ -127,20 +127,6 @@ export class BullQueuesService implements OnModuleInit, OnModuleDestroy {
          * cannot do that because they require blocking connections to Redis, which
          * makes it impossible to reuse them.
          */
-        this._schedulers[queueKey] = new QueueScheduler(queueName, {
-          prefix: queuePrefix,
-          connection: {
-            tls: this.configService.config.REDIS_TLS ? {} : undefined,
-            host: this.configService.config.REDIS_HOST,
-            port: this.configService.config.REDIS_PORT,
-            password: this.configService.config.REDIS_PASSWORD,
-          },
-        });
-        this._schedulers[queueKey].on('error', (err) => {
-          Error.captureStackTrace(err);
-          this.logger.error(err.stack);
-          this.removeQueue(queuePrefix, queueName);
-        });
         this.eventEmitter.emit(
           EVENT_TYPES.QUEUE_CREATED,
           new QueueCreatedEvent(queuePrefix, this._queues[queueKey]),
@@ -158,15 +144,12 @@ export class BullQueuesService implements OnModuleInit, OnModuleDestroy {
 
         try {
           await this._queues[queueKey].close();
-          await this._schedulers[queueKey].close();
         } catch (err) {
           // in the event of an error just ignore it and move on
           this.logger.error(err);
         }
 
         delete this._queues[queueKey];
-        delete this._schedulers[queueKey];
-
         this.eventEmitter.emit(
           EVENT_TYPES.QUEUE_REMOVED,
           new QueueRemovedEvent(queuePrefix, queueName),
@@ -359,10 +342,9 @@ export class BullQueuesService implements OnModuleInit, OnModuleDestroy {
       const previouslyLoadedQueues = this.getLoadedQueues();
       let newlyLoadedQueues: Array<any> = [];
       this.logger.debug(
-        `Queues currently monitored: ${
-          previouslyLoadedQueues.length > 0
-            ? previouslyLoadedQueues.join(', ')
-            : '<none>'
+        `Queues currently monitored: ${previouslyLoadedQueues.length > 0
+          ? previouslyLoadedQueues.join(', ')
+          : '<none>'
         }`,
       );
       const queuePrefixes =
@@ -392,8 +374,7 @@ export class BullQueuesService implements OnModuleInit, OnModuleDestroy {
         (x) => !newlyLoadedQueues.includes(x),
       );
       this.logger.log(
-        `Pruning unused queues: ${
-          queuesToPrune.length > 0 ? queuesToPrune.join(', ') : '<none>'
+        `Pruning unused queues: ${queuesToPrune.length > 0 ? queuesToPrune.join(', ') : '<none>'
         }`,
       );
       for (const queueToPrune of queuesToPrune) {
@@ -472,7 +453,7 @@ export class BullQueuesService implements OnModuleInit, OnModuleDestroy {
     // close all connections
     for (const queue of [
       Object.values(this._queues),
-      Object.values(this._schedulers),
+      // Object.values(this._schedulers),
     ].flat()) {
       this.logger.warn(`Closing queue: ${queue.name}`);
       await new Promise<void>(async (resolve) => {
