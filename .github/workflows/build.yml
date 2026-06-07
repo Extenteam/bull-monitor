@@ -33,7 +33,7 @@ jobs:
         with:
           aws-region: us-east-2
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_STAGING }}
-          role-session-name: github-action-workflow
+          role-session-name: github-action-workflows
 
       - name: Login to ECR
         id: login-ecr
