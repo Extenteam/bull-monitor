@@ -32,7 +32,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: us-east-2
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_STAGING }}
+          # role-to-assume: ${{ secrets.AWS_IAM_ROLE_STAGING }}
+          role-to-assume: arn:aws:iam::339712749794:role/github-action-staging
           role-session-name: github-action-workflows
 
       - name: Login to ECR
